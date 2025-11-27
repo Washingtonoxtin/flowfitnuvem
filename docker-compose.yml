@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Aplicação Flask
   backend:
     build: ./backend
     ports:
@@ -11,12 +10,12 @@ services:
       - FLASK_APP=app.py
       - FLASK_ENV=production
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend:/app
     restart: unless-stopped
 
-  # Banco de dados MySQL
   db:
     image: mysql:8.0
     environment:
@@ -28,23 +27,19 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p2Abcsp@drao"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Frontend (servidor web simples)
   frontend:
     image: nginx:alpine
     ports:
       - "80:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
-    depends_on:
-      - backend
-    restart: unless-stopped frontend:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf  # ← Adicione essa linha
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - backend
     restart: unless-stopped
